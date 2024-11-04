@@ -116,5 +116,18 @@ public class NetworkClient : MonoBehaviour
         buffer.Dispose();
     }
 
+    public void SendLoginRequest(string username, string password)
+    {
+        string message = $"LOGIN|{username}|{password}";
+        SendMessageToServer(message);
+    }
+
+    public void SendCreateAccountRequest(string username, string password)
+    {
+        string message = $"CREATE_ACCOUNT|{username}|{password}";
+        SendMessageToServer(message);
+    }
+
+
 }
 
