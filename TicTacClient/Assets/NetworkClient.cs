@@ -25,7 +25,10 @@ public class NetworkClient : MonoBehaviour
 
     public void OnDestroy()
     {
-        networkConnection.Disconnect(networkDriver);
+        if (networkConnection.IsCreated)
+        {
+            networkConnection.Disconnect(networkDriver);
+        }
         networkConnection = default(NetworkConnection);
         networkDriver.Dispose();
     }
@@ -91,19 +94,45 @@ public class NetworkClient : MonoBehaviour
     private bool PopNetworkEventAndCheckForData(out NetworkEvent.Type networkEventType, out DataStreamReader streamReader, out NetworkPipeline pipelineUsedToSendEvent)
     {
         networkEventType = networkConnection.PopEvent(networkDriver, out streamReader, out pipelineUsedToSendEvent);
-
-        if (networkEventType == NetworkEvent.Type.Empty)
-            return false;
-        return true;
+        return networkEventType != NetworkEvent.Type.Empty;
     }
 
     private void ProcessReceivedMsg(string msg)
     {
         Debug.Log("Msg received = " + msg);
+
+        switch (msg)
+        {
+            case "LOGIN_SUCCESS":
+                Debug.Log("Login successful!");
+                break;
+            case "LOGIN_FAILED":
+                Debug.Log("Login failed: Incorrect password.");
+                break;
+            case "ACCOUNT_NOT_FOUND":
+                Debug.Log("Login failed: Account does not exist.");
+                break;
+            case "ACCOUNT_CREATION_SUCCESS":
+                Debug.Log("Account created successfully!");
+                break;
+            case "ACCOUNT_CREATION_FAILED":
+                Debug.Log("Account creation failed: Username already exists.");
+                break;
+            default:
+                Debug.Log("Unknown message: " + msg);
+                break;
+        }
     }
+
 
     public void SendMessageToServer(string msg)
     {
+        if (!networkConnection.IsCreated)
+        {
+            Debug.LogError("Cannot send message: network connection is not created.");
+            return;
+        }
+
         byte[] msgAsByteArray = Encoding.Unicode.GetBytes(msg);
         NativeArray<byte> buffer = new NativeArray<byte>(msgAsByteArray, Allocator.Persistent);
 
@@ -124,10 +153,13 @@ public class NetworkClient : MonoBehaviour
 
     public void SendCreateAccountRequest(string username, string password)
     {
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            Debug.LogError("Username or password is null or empty.");
+            return;
+        }
+
         string message = $"CREATE_ACCOUNT|{username}|{password}";
         SendMessageToServer(message);
     }
-
-
 }
-
