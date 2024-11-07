@@ -9,13 +9,21 @@ public class ClientUIManager : MonoBehaviour
     public TMP_InputField passwordInputField;
 
     private NetworkClient clientInstance;
+    private GameStateManager gameStateManager;
 
     void Start()
     {
         clientInstance = FindObjectOfType<NetworkClient>();
+        gameStateManager = FindObjectOfType<GameStateManager>();
+
         if (clientInstance == null)
         {
             Debug.LogError("NetworkClient instance not found. Please ensure it is in the scene.");
+        }
+
+        if (gameStateManager == null)
+        {
+            Debug.LogError("GameStateManager instance not found. Please ensure it is in the scene.");
         }
     }
 
@@ -43,6 +51,10 @@ public class ClientUIManager : MonoBehaviour
         {
             case "LOGIN_SUCCESS":
                 Debug.Log("Login successful!");
+                if (gameStateManager != null)
+                {
+                    gameStateManager.ChangeState(GameState.Room);  
+                }
                 break;
             case "LOGIN_FAILED":
                 Debug.Log("Login failed. Please check your credentials.");
@@ -53,6 +65,11 @@ public class ClientUIManager : MonoBehaviour
             case "ACCOUNT_CREATION_FAILED":
                 Debug.Log("Account creation failed. Username may already exist.");
                 break;
+            default:
+                Debug.Log("Unknown response: " + response);
+                break;
         }
     }
+
+
 }

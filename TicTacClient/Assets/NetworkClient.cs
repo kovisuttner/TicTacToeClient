@@ -101,7 +101,17 @@ public class NetworkClient : MonoBehaviour
     {
         Debug.Log("Msg received = " + msg);
 
-        switch (msg)
+        
+        string[] parts = msg.Split('|');
+        string messageType = parts[0];  
+
+        ClientUIManager clientUIManager = FindObjectOfType<ClientUIManager>();
+        if (clientUIManager != null)
+        {
+            clientUIManager.HandleServerResponse(messageType);  
+        }
+
+        switch (messageType)
         {
             case "LOGIN_SUCCESS":
                 Debug.Log("Login successful!");
@@ -147,19 +157,15 @@ public class NetworkClient : MonoBehaviour
 
     public void SendLoginRequest(string username, string password)
     {
-        string message = $"LOGIN|{username}|{password}";
-        SendMessageToServer(message);
+        string loginMessage = "LOGIN|" + username + "|" + password;
+        SendMessageToServer(loginMessage);
     }
+
 
     public void SendCreateAccountRequest(string username, string password)
     {
-        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-        {
-            Debug.LogError("Username or password is null or empty.");
-            return;
-        }
-
-        string message = $"CREATE_ACCOUNT|{username}|{password}";
-        SendMessageToServer(message);
+        string createAccountMessage = "CREATE_ACCOUNT|" + username + "|" + password;
+        SendMessageToServer(createAccountMessage);
     }
+
 }
