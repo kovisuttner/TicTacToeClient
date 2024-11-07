@@ -27,4 +27,10 @@ public class GameStateManager : MonoBehaviour
         roomPanel.SetActive(currentState == GameState.Room);
         gamePanel.SetActive(currentState == GameState.Game);
     }
+
+    public void OnPlayButtonClicked()
+    {
+        ChangeState(GameState.Game);  
+    }
+
 }
