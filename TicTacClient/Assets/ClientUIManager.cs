@@ -11,6 +11,9 @@ public class ClientUIManager : MonoBehaviour
     private NetworkClient clientInstance;
     private GameStateManager gameStateManager;
 
+    public GameObject waitingUI;
+
+
     void Start()
     {
         clientInstance = FindObjectOfType<NetworkClient>();
@@ -69,6 +72,18 @@ public class ClientUIManager : MonoBehaviour
                 Debug.Log("Unknown response: " + response);
                 break;
         }
+    }
+
+    public void ShowWaitingForOpponentUI()
+    {
+        waitingUI.SetActive(true);
+    }
+
+    public void OnBackButtonClicked()
+    {
+        clientInstance.LeaveRoom();
+
+        gameStateManager.ChangeState(GameState.Room);
     }
 
 

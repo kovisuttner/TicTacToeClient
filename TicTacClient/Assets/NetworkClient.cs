@@ -12,9 +12,14 @@ public class NetworkClient : MonoBehaviour
     NetworkPipeline nonReliableNotInOrderedPipeline;
     const ushort NetworkPort = 8080;
     const string IPAddress = "192.168.2.23";
+    private GameStateManager gameStateManager;
+    private ClientUIManager clientUIManager;
 
     void Start()
     {
+        gameStateManager = FindObjectOfType<GameStateManager>();
+        clientUIManager = FindObjectOfType<ClientUIManager>();
+
         networkDriver = NetworkDriver.Create();
         reliableAndInOrderPipeline = networkDriver.CreatePipeline(typeof(FragmentationPipelineStage), typeof(ReliableSequencedPipelineStage));
         nonReliableNotInOrderedPipeline = networkDriver.CreatePipeline(typeof(FragmentationPipelineStage));
@@ -99,34 +104,25 @@ public class NetworkClient : MonoBehaviour
 
     private void ProcessReceivedMsg(string msg)
     {
-        Debug.Log("Msg received = " + msg);
-
-        
         string[] parts = msg.Split('|');
-        string messageType = parts[0];  
-
-        ClientUIManager clientUIManager = FindObjectOfType<ClientUIManager>();
-        if (clientUIManager != null)
-        {
-            clientUIManager.HandleServerResponse(messageType);  
-        }
+        string messageType = parts[0];
 
         switch (messageType)
         {
             case "LOGIN_SUCCESS":
-                Debug.Log("Login successful!");
+                gameStateManager.ChangeState(GameState.Room);
                 break;
-            case "LOGIN_FAILED":
-                Debug.Log("Login failed: Incorrect password.");
+            case "ROOM_JOIN_SUCCESS":
                 break;
-            case "ACCOUNT_NOT_FOUND":
-                Debug.Log("Login failed: Account does not exist.");
+            case "ROOM_CREATED":
+                 clientUIManager.ShowWaitingForOpponentUI();
                 break;
-            case "ACCOUNT_CREATION_SUCCESS":
-                Debug.Log("Account created successfully!");
+            case "GAME_STARTED":
                 break;
-            case "ACCOUNT_CREATION_FAILED":
-                Debug.Log("Account creation failed: Username already exists.");
+            case "LEFT_ROOM":
+                break;
+            case "START_GAME":
+                gameStateManager.ChangeState(GameState.Game);
                 break;
             default:
                 Debug.Log("Unknown message: " + msg);
@@ -166,6 +162,17 @@ public class NetworkClient : MonoBehaviour
     {
         string createAccountMessage = "CREATE_ACCOUNT|" + username + "|" + password;
         SendMessageToServer(createAccountMessage);
+    }
+
+    public void SendJoinOrCreateRoomRequest(string roomName)
+    {
+        string joinOrCreateMessage = "JOIN_OR_CREATE_ROOM|" + roomName;
+        SendMessageToServer(joinOrCreateMessage);
+    }
+
+    public void LeaveRoom()
+    {
+        SendMessageToServer("LEAVE_ROOM");
     }
 
 }
