@@ -4,27 +4,34 @@ using TMPro;
 
 public class TicTacToeGameManager : MonoBehaviour
 {
-    private Button[] buttons;
-    private string[] board;
-    private string currentPlayer;
+    [HideInInspector]
+    public Button[] buttons;
+    [HideInInspector]
+    public string[] board;
+    [HideInInspector]
+    public string currentPlayer;
 
-    public TMP_Text gameText; 
+    public TMP_Text gameText;
+
+    private NetworkClient clientInstance;
 
     void Start()
     {
+        clientInstance = FindObjectOfType<NetworkClient>();
+
         buttons = new Button[9];
         board = new string[9];
-        currentPlayer = "X"; 
+        currentPlayer = "X";
 
         for (int i = 0; i < 9; i++)
         {
             buttons[i] = GameObject.Find("Button" + i).GetComponent<Button>();
-            int index = i; 
+            int index = i;
             buttons[i].onClick.AddListener(() => MakeMove(index));
-            board[i] = ""; 
+            board[i] = "";
         }
 
-        UpdateGameText(); 
+        UpdateGameText();
     }
 
     public void MakeMove(int index)
@@ -38,73 +45,47 @@ public class TicTacToeGameManager : MonoBehaviour
             buttonText.text = currentPlayer;
         }
 
-        if (CheckForWinner())
-        {
-            gameText.text = $"{currentPlayer} Wins!";
-            return;
-        }
+        clientInstance.SendMove(index, currentPlayer);
 
-        if (IsBoardFull())
+        if (CheckForWin())
         {
-            gameText.text = "It's a Draw!";
-            return; 
+            gameText.text = currentPlayer + " Wins!";
         }
-
-        currentPlayer = (currentPlayer == "X") ? "O" : "X";
-        UpdateGameText(); 
+        else
+        {
+            currentPlayer = currentPlayer == "X" ? "O" : "X";
+            UpdateGameText();
+        }
     }
 
-    bool CheckForWinner()
+
+    private void UpdateGameText()
     {
-        int[,] winConditions = new int[,]
+        gameText.text = "Player " + currentPlayer + "'s Turn";
+    }
+
+    private bool CheckForWin()
+    {
+        int[][] winPatterns = new int[][]
         {
-            { 0, 1, 2 }, { 3, 4, 5 }, { 6, 7, 8 },
-            { 0, 3, 6 }, { 1, 4, 7 }, { 2, 5, 8 },
-            { 0, 4, 8 }, { 2, 4, 6 }              
+            new int[] { 0, 1, 2 },
+            new int[] { 3, 4, 5 },
+            new int[] { 6, 7, 8 },
+            new int[] { 0, 3, 6 },
+            new int[] { 1, 4, 7 },
+            new int[] { 2, 5, 8 },
+            new int[] { 0, 4, 8 },
+            new int[] { 2, 4, 6 }
         };
 
-        for (int i = 0; i < winConditions.GetLength(0); i++)
+        foreach (var pattern in winPatterns)
         {
-            int a = winConditions[i, 0];
-            int b = winConditions[i, 1];
-            int c = winConditions[i, 2];
-
-            if (board[a] == currentPlayer && board[b] == currentPlayer && board[c] == currentPlayer)
+            if (board[pattern[0]] == board[pattern[1]] && board[pattern[1]] == board[pattern[2]] && board[pattern[0]] != "")
             {
                 return true;
             }
         }
 
         return false;
-    }
-
-    bool IsBoardFull()
-    {
-        foreach (string cell in board)
-        {
-            if (cell == "")
-                return false;
-        }
-        return true;
-    }
-
-    public void ResetGame()
-    {
-        for (int i = 0; i < 9; i++)
-        {
-            board[i] = "";
-            TMP_Text buttonText = buttons[i].GetComponentInChildren<TMP_Text>();
-            if (buttonText != null)
-            {
-                buttonText.text = "";
-            }
-        }
-        currentPlayer = "X"; 
-        UpdateGameText(); 
-    }
-
-    private void UpdateGameText()
-    {
-        gameText.text = $"Player {currentPlayer}'s Turn";
     }
 }

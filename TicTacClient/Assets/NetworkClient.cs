@@ -3,6 +3,7 @@ using UnityEngine.Assertions;
 using Unity.Collections;
 using Unity.Networking.Transport;
 using System.Text;
+using TMPro;
 
 public class NetworkClient : MonoBehaviour
 {
@@ -14,11 +15,13 @@ public class NetworkClient : MonoBehaviour
     const string IPAddress = "192.168.2.23";
     private GameStateManager gameStateManager;
     private ClientUIManager clientUIManager;
+    private TicTacToeGameManager ticTacToeGameManager; 
 
     void Start()
     {
         gameStateManager = FindObjectOfType<GameStateManager>();
         clientUIManager = FindObjectOfType<ClientUIManager>();
+        ticTacToeGameManager = FindObjectOfType<TicTacToeGameManager>(); 
 
         networkDriver = NetworkDriver.Create();
         reliableAndInOrderPipeline = networkDriver.CreatePipeline(typeof(FragmentationPipelineStage), typeof(ReliableSequencedPipelineStage));
@@ -40,26 +43,13 @@ public class NetworkClient : MonoBehaviour
 
     void Update()
     {
-        #region Check Input and Send Msg
-
-        if (Input.GetKeyDown(KeyCode.A))
-            SendMessageToServer("Hello server's world, sincerely your network client");
-
-        #endregion
-
         networkDriver.ScheduleUpdate().Complete();
-
-        #region Check for client to server connection
 
         if (!networkConnection.IsCreated)
         {
             Debug.Log("Client is unable to connect to server");
             return;
         }
-
-        #endregion
-
-        #region Manage Network Events
 
         NetworkEvent.Type networkEventType;
         DataStreamReader streamReader;
@@ -92,8 +82,6 @@ public class NetworkClient : MonoBehaviour
                     break;
             }
         }
-
-        #endregion
     }
 
     private bool PopNetworkEventAndCheckForData(out NetworkEvent.Type networkEventType, out DataStreamReader streamReader, out NetworkPipeline pipelineUsedToSendEvent)
@@ -115,7 +103,7 @@ public class NetworkClient : MonoBehaviour
             case "ROOM_JOIN_SUCCESS":
                 break;
             case "ROOM_CREATED":
-                 clientUIManager.ShowWaitingForOpponentUI();
+                clientUIManager.ShowWaitingForOpponentUI();
                 break;
             case "GAME_STARTED":
                 break;
@@ -124,8 +112,46 @@ public class NetworkClient : MonoBehaviour
             case "START_GAME":
                 gameStateManager.ChangeState(GameState.Game);
                 break;
+            case "ROOM_FULL_OBSERVER":
+                gameStateManager.ChangeState(GameState.Game);
+                clientUIManager.ShowObserverUI();
+                break;
+            case "TURN":
+                if (parts.Length > 1)
+                {
+                    string turnPlayer = parts[1];
+                    UpdateTurnUI(turnPlayer);
+                }
+                else
+                {
+                    Debug.LogError("Invalid TURN message format.");
+                }
+                break;
+            case "MOVE":
+                if (parts.Length > 2)
+                {
+                    string playerSymbol = parts[1];
+                    int cellIndex = int.Parse(parts[2]);
+                    UpdateBoard(cellIndex, playerSymbol);
+                    Debug.Log($"Received Move: {playerSymbol} at cell {cellIndex}");
+                }
+                else
+                {
+                    Debug.LogError("Invalid MOVE message format.");
+                }
+                break;
+            case "WIN":
+                if (parts.Length > 1)
+                {
+                    string winnerSymbol = parts[1];  
+                }
+                else
+                {
+                    Debug.LogError("Invalid WIN message format.");
+                }
+                break;
             default:
-                Debug.Log("Unknown message: " + msg);
+                Debug.LogError("Unknown message type received: " + messageType);
                 break;
         }
     }
@@ -139,6 +165,8 @@ public class NetworkClient : MonoBehaviour
             return;
         }
 
+        Debug.Log($"Message being sent: {msg}");
+
         byte[] msgAsByteArray = Encoding.Unicode.GetBytes(msg);
         NativeArray<byte> buffer = new NativeArray<byte>(msgAsByteArray, Allocator.Persistent);
 
@@ -148,31 +176,60 @@ public class NetworkClient : MonoBehaviour
         streamWriter.WriteBytes(buffer);
         networkDriver.EndSend(streamWriter);
 
+        Debug.Log("Message sent to server successfully.");
+
         buffer.Dispose();
+    }
+
+    public void SendMove(int index, string playerSymbol)
+    {
+        string moveMessage = $"MOVE|{playerSymbol}|{index}"; 
+        SendMessageToServer(moveMessage);
+    }
+
+
+
+    private void UpdateTurnUI(string turnPlayer)
+    {
+        ticTacToeGameManager.gameText.text = $"{turnPlayer}'s Turn"; 
+    }
+
+    private void UpdateBoard(int cellIndex, string playerSymbol)
+    {
+        ticTacToeGameManager.board[cellIndex] = playerSymbol;
+        TMP_Text buttonText = ticTacToeGameManager.buttons[cellIndex].GetComponentInChildren<TMP_Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = playerSymbol;
+        }
+    }
+
+    private void ShowGameResult(string resultMessage)
+    {
+        ticTacToeGameManager.gameText.text = resultMessage;
     }
 
     public void SendLoginRequest(string username, string password)
     {
-        string loginMessage = "LOGIN|" + username + "|" + password;
-        SendMessageToServer(loginMessage);
-    }
-
-
-    public void SendCreateAccountRequest(string username, string password)
-    {
-        string createAccountMessage = "CREATE_ACCOUNT|" + username + "|" + password;
-        SendMessageToServer(createAccountMessage);
+        string message = $"LOGIN|{username}|{password}";
+        SendMessageToServer(message); 
     }
 
     public void SendJoinOrCreateRoomRequest(string roomName)
     {
-        string joinOrCreateMessage = "JOIN_OR_CREATE_ROOM|" + roomName;
-        SendMessageToServer(joinOrCreateMessage);
+        string message = $"JOIN_OR_CREATE_ROOM|{roomName}";
+        SendMessageToServer(message); 
+    }
+
+    public void SendCreateAccountRequest(string username, string password)
+    {
+        string message = $"CREATE_ACCOUNT|{username}|{password}";
+        SendMessageToServer(message); 
     }
 
     public void LeaveRoom()
     {
-        SendMessageToServer("LEAVE_ROOM");
+        string message = "LEAVE_ROOM";
+        SendMessageToServer(message); 
     }
-
 }

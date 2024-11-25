@@ -13,6 +13,7 @@ public class ClientUIManager : MonoBehaviour
 
     public GameObject waitingUI;
 
+    public GameObject observerPanel;
 
     void Start()
     {
@@ -86,5 +87,11 @@ public class ClientUIManager : MonoBehaviour
         gameStateManager.ChangeState(GameState.Room);
     }
 
-
+    public void ShowObserverUI()
+    {
+        if (observerPanel != null)
+        {
+            observerPanel.SetActive(true);
+        }
+    }
 }
